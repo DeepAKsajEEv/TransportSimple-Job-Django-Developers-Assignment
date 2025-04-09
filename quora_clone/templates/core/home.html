@@ -1,0 +1,122 @@
+{% extends 'core/base.html' %}
+{% block content %}
+<h2>Questions</h2>
+{% if user.is_authenticated %}
+  <a class="btn btn-outline-primary mb-3" href="{% url 'post_question' %}">Ask a Question</a>
+{% else %}
+  <button class="btn btn-outline-secondary mb-3" data-bs-toggle="modal" data-bs-target="#authModal">
+    Ask a Question (Login Required)
+  </button>
+{% endif %}
+<div class="list-group">
+  {% for q in questions %}
+    {% if user.is_authenticated %}
+      <div class="list-group-item d-flex justify-content-between align-items-start">
+        <a href="{% url 'question_detail' q.id %}" class="text-decoration-none flex-grow-1">
+          <strong>{{ q.title }}</strong> — by {{ q.author.username }}<br>
+          <small>{{ q.created_at }}</small>
+        </a>
+        {% if q.author == user %}
+          <button class="btn btn-sm btn-outline-danger ms-2" onclick="openDeleteModal('question', {{ q.id }})" title="Delete Question">
+            <i class="bi bi-trash"></i>
+          </button>
+        {% endif %}
+      </div>
+    {% else %}
+      <a href="#" class="list-group-item list-group-item-action" data-bs-toggle="modal" data-bs-target="#authModal">
+        <strong>{{ q.title }}</strong> — by {{ q.author.username }}<br>
+        <small>{{ q.created_at }}</small>
+      </a>
+    {% endif %}
+  {% endfor %}
+</div>
+
+<div class="mt-3">
+  {% if questions.has_previous %}<a href="?page={{ questions.previous_page_number }}" class="btn btn-sm btn-outline-secondary">Previous</a>{% endif %}
+  {% if questions.has_next %}<a href="?page={{ questions.next_page_number }}" class="btn btn-sm btn-outline-secondary">Next</a>{% endif %}
+</div>
+{% if user.is_authenticated %}
+<h4 class="mt-4">Your Answered Questions</h4>
+<ul class="list-group">
+  {% for q in questions %}
+    {% if q.id in answered_questions %}
+      <li class="list-group-item"><a href="{% url 'question_detail' q.id %}">{{ q.title }}</a></li>
+    {% endif %}
+  {% endfor %}
+</ul>
+{% endif %}
+
+
+<!-- Auth Modal -->
+<div class="modal fade" id="authModal" tabindex="-1" aria-labelledby="authModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="authModalLabel">Sign Up or Login</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        <p>You need to create an account or login to ask a question or view complete answers.</p>
+      </div>
+      <div class="modal-footer">
+        <a href="{% url 'signup' %}" class="btn btn-success">Sign Up</a>
+        <a href="{% url 'login' %}" class="btn btn-primary">Login</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+      </div>
+      <div class="modal-body">
+        Are you sure you want to delete the question you asked?
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+        <button type="button" class="btn btn-danger" id="confirmDeleteBtn">Delete</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<script>
+let deleteType = null;
+let deleteId = null;
+
+function openDeleteModal(type, id) {
+    deleteType = type;
+    deleteId = id;
+    const modal = new bootstrap.Modal(document.getElementById('deleteModal'));
+    modal.show();
+}
+
+document.getElementById('confirmDeleteBtn').addEventListener('click', function () {
+    if (deleteType && deleteId) {
+        fetch(`/delete-${deleteType}/${deleteId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': '{{ csrf_token }}',
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        }).then(response => {
+            if (response.ok) {
+                window.location.reload();
+            }
+        });
+    }
+});
+</script>
+
+{% endblock %}
+
+
+
+
+
